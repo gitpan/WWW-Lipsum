@@ -1,0 +1,9 @@
+CHANGES
+INSTALL
+lib/WWW/Lipsum.pm
+Makefile.PL
+MANIFEST
+META.yml
+Build.PL
+README
+t/lipsum.t
