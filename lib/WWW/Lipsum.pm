@@ -6,9 +6,9 @@ use vars qw( $VERSION );
 
 use LWP::UserAgent;
 use HTTP::Request::Common;
-use HTML::TokeParser;
+use HTML::TokeParser::Simple;
 
-$VERSION = 0.11;
+$VERSION = 0.2;
 
 sub new {
 	my $class = shift;
@@ -17,7 +17,7 @@ sub new {
 	return $self;
 }
 
-sub lipsum {
+sub generate {
 	my ($self, %args) = @_;
 
 	foreach my $arg ( qw( amount type start html ) ) {
@@ -26,124 +26,119 @@ sub lipsum {
 
 	# Arguments. If none are given, generate 1 paragraph by default.
 
-	my $amount = $args{ amount } || 1;	 # How much text is wanted?
-	my $what   = $args{ what }   || 'paras'; # What type of text?
-	my $start  = $args{ start }  || 1;	 # Begin with "Lorem ipsum..."?
-	my $html   = $args{ html }   || 0;	 # Wrap text in HTML tags?
+	$self->{amount} = $args{amount} || 1;	      # How much text is wanted?
+	$self->{what}   = $args{what}   || 'paras'; # What type of text?
+	$self->{start}  = $args{start}  || 1;	      # Begin with "Lorem ipsum..."?
+	$self->{html}   = $args{html}   || undef;	  # Wrap text in HTML tags?
 
 	my $ua = LWP::UserAgent->new;
+  my $response;
+  
+  if ($self->{start} and $self->{start} eq 'no')
+  {
+    $response = $ua->request(POST 'http://www.lipsum.com/feed/http', [
+          amount => $self->{amount},
+          what   => $self->{what}
+        ]);
+  }
+  else
+  {
+    $response = $ua->request(POST 'http://www.lipsum.com/feed/http', [
+          amount => $self->{amount},
+          what   => $self->{what},
+          start  => 1
+        ]);
+  }
+      
+  return "Error: $!" unless $response->is_success;
 
-	my $request = HTTP::Request->new('GET','http://www.lipsum.com/cgi-bin/lipsum.pl');
-	my $response = $ua->request($request); 
+  my $raw = $response->content;
+  die "Fatal error: lipsum page wasn't as expected." unless defined $raw && $raw =~ /(.*)Generated(.*)/s;
 
-	# Change a "1" answer for the "start" parameter to the 
-        # "yes" that lipsum.com understands.
-
-	if ( ($start) && ($start eq '1') ) { $start = 'yes' }
-	else { $start = 'no' }
-
-	# New HTTP request for the lipsum script.
-
-	$response = $ua->request(POST 'http://www.lipsum.com/cgi-bin/lipsum.pl', [
-					amount => $amount,
-					what   => $what,
-					start  => $start
-				]);
-
-	if ($response->is_success) {
-
-		my $raw = $response->content;
-
-	        my $stream = HTML::TokeParser->new( \$raw ) or die $!;
-
-		# Skip the first table tag in the page.
-		my $tag = $stream->get_tag('table');
-
-		# Move to the inner table.
-		$tag = $stream->get_tag('table');
-
-		# Move to the "font"-enclosed area that contains our lorem ipsum text.
-		$tag = $stream->get_tag('font');
-		my $text = $stream->get_text('/font');
-
-		if ($text =~ /(.*)Generated(.*)/s) {
-
-			my $lipsum = $1;
-
-			if ($what eq 'words') {
-				$lipsum =~ s/\n//g;
-				return $lipsum;
-			}
-
-			elsif ($what eq 'bytes') {
-				$lipsum =~ s/\n//g;
-				return $lipsum;
-			}
-
-			elsif ($what eq 'lists') {
-
-				my @items = split( "\n", $lipsum );
-
-				foreach my $li (@items) {
-
-					# drop empty paragraphs created by double line breaks
-					next unless $li;
-
-					chomp($li);
-
-					# fix sentences that have butted up against each other
-
-					$li =~ s/\./\. /g;
-
-					if ($html eq "1") {
-						# wrap list items in <li></li>
-						$li = "<li>" . $li;
-						$li = $li . "</li>\n" 
-					}
-				}
-
-				return @items;
-			}
-
-			else {
-				$lipsum =~ s/^\n\n//;
-
-				# The lipsum.com text generator puts the starting phrase on a line of its own, which isn't noticeable when viewing in
-				# a browser, but causes a spurious 'paragraph' for us - so strip it.
-
-				if ($start eq 'yes') {
-					$lipsum =~ s/adipiscing elit(.*?)\n/adipiscing elit\. /;
-				}
-
-				my @paragraphs = split( "\n", $lipsum );
-
-				foreach my $para (@paragraphs) {
-
-					# drop empty paragraphs created by double  line breaks
-
-					if ($para eq '') {
-						shift(@paragraphs);
-						next;
-					}
-
-					chomp($para);
-
-					if ($html eq "1") {
-						# wrap paragraphs in <p></p>
-						$para = "<p>\n" . $para;
-						$para = $para . "\n</p>";
-					}
-				}
-
-				return @paragraphs;
-			}
-		}
-	}
+  my $stream = HTML::TokeParser::Simple->new( \$raw ) or die $!;
  
-	else {
-		return "Error: $!";
-	}
+  while (my $token = $stream->get_token)
+  {
+    # We're looking for '<div id="lipsum">'.
+    next unless $token->is_tag('div');
+    next unless defined $token->return_attr('id') && $token->return_attr('id') eq 'lipsum';
+    my $text = $stream->get_text('/div');
 
+    $text =~ s/ //; # remove leading space
+    
+    if ($self->{what} =~ /^words$/i or $self->{what} =~ /^bytes$/i)
+    {
+      $text =~ s/\n//g;
+		  return $text;
+    }
+    elsif ($self->{what} =~ /^lists$/i)
+    {
+      return $self->lists($text);
+    }
+    else
+    {
+      return $self->paras($text);
+    }
+  }
+}
+
+# The splitting and pushing and what-have-you that you're about to 
+# encounter would almost certainly be unnecessary if I really 
+# understood HTML::TokeParser.
+
+sub paras 
+{
+  my ($self, $text) = @_;
+  my @paras;
+  
+  foreach (split("\n", $text))
+  {
+    next unless $_ !~ /^ /; # drop empty chunks
+    push (@paras, $_);
+  }
+  
+  for (0..1) { shift @paras; } # drop empty items
+
+  if (defined $self->{html})
+  {
+    $_ = "<p>\n" . $_ . "\n</p>" foreach @paras;
+  }
+
+  @paras;
+}
+
+sub lists
+{
+  my ($self, $text) = @_;
+  my (@items, @list);
+
+  foreach (split( "\n", $text ))
+  {
+    next unless $_ =~ /  /; # drop empty chunks    
+    $_ =~ s/.//;            # remove leading space
+    chop $_;                # remove trailing space
+
+    foreach my $line (split '  ', $_)
+    {
+      $line = '<li>' . $line . '</li>' if $self->{html};
+      $line .= "\n";
+      push (@list, $line);
+    }
+    
+    my $tidied = join ('', @list);
+
+    $tidied = "<ul>\n" . $tidied . '</ul>' if $self->{html};
+    
+    push (@items, $tidied);
+  }
+  
+  @items;
+}
+
+# Old method name for backwards compatibility.
+sub lipsum {
+	my ($self, %args) = @_;
+  $self->generate(%args);
 }
 
 1;
@@ -180,75 +175,80 @@ retrieve them in an OO fashion to utilise for whatever purpose you wish.
 
     use WWW::Lipsum;
 
-    my $stuff = WWW::Lipsum->new();
+    my $lipsum = WWW::Lipsum->new;
 
-    print $stuff->lipsum();
+    print $lipsum->generate;
 
-    my @paragraphs = $stuff->lipsum(
-                                    amount => 5,
-                                    what   => 'paras',
-                                    start  => 1,
-                                    html   => 1
-                                   );
+    my @paragraphs = $lipsum->generate(
+                                       amount => 5,
+                                       what   => 'paras',
+                                       start  => 'no',
+                                       html   => 1
+                                      );
 
 =head1 METHODS
 
-There is just one method, C<lipsum()>, which returns lorem ipsum text. It
+There is just one method, C<generate>, which returns lorem ipsum text. It
 has several options to correspond with those offered by lipsum.com.
 
-    print $stuff->lipsum();    # default usage, no options
+    print $lipsum->generate;    # default usage, no options
 
 This will give you one paragraph of lorem ipsum, beginning with the phrase
 "Lorem ipsum dolor sit amet", as is traditional. The size of a "paragraph" is
 randomly determined by the lipsum.com text generator, but is generally between
 70 and 120 words.
 
-    my @paragraphs = $stuff->lipsum(
-                                    amount => 5,
-                                    what   => 'paras',
-                                    start  => 0,
-                                    html   => 0
-                                   );
+    my @paragraphs = $lipsum->generate(
+                                       amount => 5,
+                                       what   => 'paras',
+                                       start  => 'no',
+                                       html   => 0
+                                      );
 
 This will give you five paragraphs of lorem ipsum, the first of which will
 be without the starting phrase. Setting 'html' to 1 will cause each paragraph
 to be wrapped in HTML's <p></p> tags.
 
-    print $stuff->lipsum(
-                         amount => 100,
-                         what   => 'words'
-                        );
+    print $lipsum->generate(
+                            amount => 100,
+                            what   => 'words'
+                           );
 
-This will give you roughly a hundred words of lorem ipsum with the starting
-phrase. Roughly, because the lipsum.com text generator makes whole
-'sentences' of random length. The amount setting will be more accurate at
-higher values. The 'html' setting has no effect if you ask for words. When
+This will give you a hundred words of lorem ipsum with the starting
+phrase. The 'html' setting has no effect if you ask for words. When
 used to fill a variable, this will give you a list with one item.
 
-    print $stuff->lipsum(
-                         amount => 1024,
-                         what   => 'bytes'
-                        );
+    print $lipsum->generate(
+                            amount => 1024,
+                            what   => 'bytes'
+                           );
 
-This will give you roughly 1024 bytes of lorem ipsum with the starting
-phrase. The same caveat regarding size applies, and again the 'html' setting
-will have no effect. Again, this will give you a one-item list.
+This will give you 1024 bytes of lorem ipsum with the starting phrase. 
+Again, the 'html' setting will have no effect. Again, this will give 
+you a one-item list.
 
-   my @lists = $stuff->lipsum(
-                              amount => 10,
-                              what   => 'lists',
-                              html   => 1
-                             );
+   my @lists = $lipsum->generate(
+                                 amount => 10,
+                                 what   => 'lists',
+                                 html   => 1
+                                );
 
 The lipsum.com text generator's 'lists' setting produces HTML lists of
 random size. Using this setting with this module will give you small chunks
 of text, generally of the order of a couple of sentences. Using the 'html'
 setting will cause these chunks to be wrapped in <li></li> tags for you to
-use as you see fit.
+use as you see fit. If 'html' is off, you will get blocks of single lines of
+text.
+
+=head1 OLD METHOD NAMES
+
+The C<generate> method used to be called C<lipsum>; this is retained as an
+alias to C<generate> if you really want it.
 
 =head1 AUTHOR
 
-Earle Martin <emartin@cpan.org>.
+Earle Martin <emartin@cpan.org> wrote this scraper, but see THANKS for details 
+of who really did the work.
 
 =head1 LICENSE
 
@@ -259,4 +259,8 @@ Commons, 559 Nathan Abbott Way, Stanford, California 94305, USA.
 
 =head1 THANKS
 
-James Wilson, for creating lipsum.com.
+All kudos must go to James Wilson <webmaster(at)lipsum.com> for creating 
+lipsum.com and thus providing inspiration for this module - and also for kindly 
+actually modifying the way his site works to make it easier for me to parse.
+
+=cut

@@ -1,9 +1,10 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
+use warnings;
 use strict;
+
 use Test::More tests => 7;
 
-use lib '/home/earle/downlode.org/perl/modules/WWW-Lipsum/WWW-Lipsum-0.1/lib';
 use WWW::Lipsum;
 
 my $lipsum = WWW::Lipsum->new();
@@ -23,15 +24,15 @@ ok (
 
 
 ok (
-	$default = $lipsum->lipsum(),
+	$default = $lipsum->generate(),
 	'was able to retrieve text'
    );
 
 ok (
-	$default_no_start = $lipsum->lipsum(
-					start => 0 
+	$default_no_start = $lipsum->generate(
+					start => 'no'
 					),
-	'was able to retrieve text with "start" set to 0'
+	'was able to retrieve text with "start" set to "no"...'
    );
 
 
@@ -41,11 +42,11 @@ if ($default_no_start !~ /^Lorem ipsum/) {
 
 is (
 	$default_no_start_correct, 1,
-	'setting "start" to 0 was successful'
+	'...and setting "start" to "no" was successful'
    );
 	
 ok (
-	@single_paragraph_html = $lipsum->lipsum(
+	@single_paragraph_html = $lipsum->generate(
 						what => 'paras',
 						amount => 1,
 						html => 1
