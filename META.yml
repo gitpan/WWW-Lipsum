@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name: WWW-Lipsum
-version: 0.1
+version: 0.11
 license: unrestricted
 distribution_type: module
 requires:
@@ -12,5 +12,5 @@ conflicts: {}
 provides:
   WWW::Lipsum:
     file: lib/WWW/Lipsum.pm
-    version: 0.1
+    version: 0.11
 generated_by: Module::Build version 0.19

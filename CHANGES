@@ -1,3 +1,9 @@
+0.11	2003-08-29
+
+	* Fixed a bug that caused spurious paragraphs - the lipsum.com text
+	generator puts a rogue newline after the starting phrase, which was
+	breaking the parsing and causing one of tests to fail.
+
 0.1	2003-08-21
 
 	* Initial release.

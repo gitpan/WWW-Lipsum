@@ -3,6 +3,7 @@
 use strict;
 use Test::More tests => 7;
 
+use lib '/home/earle/downlode.org/perl/modules/WWW-Lipsum/WWW-Lipsum-0.1/lib';
 use WWW::Lipsum;
 
 my $lipsum = WWW::Lipsum->new();

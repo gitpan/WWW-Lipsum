@@ -8,7 +8,7 @@ use LWP::UserAgent;
 use HTTP::Request::Common;
 use HTML::TokeParser;
 
-$VERSION = 0.1;
+$VERSION = 0.11;
 
 sub new {
 	my $class = shift;
@@ -26,10 +26,10 @@ sub lipsum {
 
 	# Arguments. If none are given, generate 1 paragraph by default.
 
-	my $amount = $args{ amount } || 1;	# How much text is wanted?
-	my $what   = $args{ what }   || 'paras';# What type of text?
-	my $start  = $args{ start }  || 1;	# Begin with "Lorem ipsum..."?
-	my $html   = $args{ html }   || 0;	# Wrap text in HTML tags?
+	my $amount = $args{ amount } || 1;	 # How much text is wanted?
+	my $what   = $args{ what }   || 'paras'; # What type of text?
+	my $start  = $args{ start }  || 1;	 # Begin with "Lorem ipsum..."?
+	my $html   = $args{ html }   || 0;	 # Wrap text in HTML tags?
 
 	my $ua = LWP::UserAgent->new;
 
@@ -106,14 +106,25 @@ sub lipsum {
 			}
 
 			else {
-				$lipsum =~ s/^\n//;
+				$lipsum =~ s/^\n\n//;
+
+				# The lipsum.com text generator puts the starting phrase on a line of its own, which isn't noticeable when viewing in
+				# a browser, but causes a spurious 'paragraph' for us - so strip it.
+
+				if ($start eq 'yes') {
+					$lipsum =~ s/adipiscing elit(.*?)\n/adipiscing elit\. /;
+				}
 
 				my @paragraphs = split( "\n", $lipsum );
 
 				foreach my $para (@paragraphs) {
 
-					# drop empty paragraphs created by double line breaks
-					next unless $para;
+					# drop empty paragraphs created by double  line breaks
+
+					if ($para eq '') {
+						shift(@paragraphs);
+						next;
+					}
 
 					chomp($para);
 
