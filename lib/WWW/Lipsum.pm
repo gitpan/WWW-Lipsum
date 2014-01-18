@@ -8,7 +8,7 @@ use LWP::UserAgent;
 use HTTP::Request::Common;
 use HTML::TokeParser::Simple;
 
-$VERSION = 0.3002;
+$VERSION = 0.3003;
 
 sub new {
 	my $class = shift;
@@ -245,26 +245,26 @@ text.
 The C<generate> method used to be called C<lipsum>; this is retained as an
 alias to C<generate> if you really want it.
 
+=head1 MAINTAINER
+
+Zoffix Znet <zoffix@cpan.org>
+
 =head1 AUTHOR
 
 Earle Martin <emartin@cpan.org> wrote this scraper, but see THANKS for details
 of who really did the work.
 
-=head1 MAINTAINER
-
-Zoffix Znet <zoffix@cpan.org>
-
 =head1 LICENSE AND COPYRIGHT
 
-This program is licensed under the Creative Commons Attribution-ShareAlike
-License. To view a copy of this license, visit
-L<http://creativecommons.org/licenses/by-sa/1.0/> or send a letter to Creative
+This program is licensed under the
+Creative Commons Attribution-ShareAlike 3.0 Unported License (CC BY-SA 3.0).
+To view a copy of this license, visit
+L<http://creativecommons.org/licenses/by-sa/3.0/> or send a letter to Creative
 Commons, 559 Nathan Abbott Way, Stanford, California 94305, USA.
 
-=head1 LICENSE AND COPYRIGHT
+LICENSE AND COPYRIGHT
 
-Artistic ### This is to fix a seemingly buggy behaviour of
-Test::Kwalitee; the actual license is in the section above
+Artistic ### This is to fix a seemingly buggy behaviour of Test::Kwalitee; the actual license is in the section above
 
 =head1 THANKS
 

@@ -8,5 +8,8 @@ META.yml
 Build.PL
 README
 t/lipsum.t
+xt/pod.t
+xt/pod-coverage.t
 xt/kwalitee.t
+examples/lipsum.pl
 META.json

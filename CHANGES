@@ -1,6 +1,11 @@
 
+0.3003  2014-01-18
+      - Added a few missing files to MANIFEST that got left out on previous
+        update.
+
 0.3002  2014-01-17
-      - Fixed error handling to return HTTP status line instead of
+      - Fixed RT#38134: (https://rt.cpan.org/Ticket/Display.html?id=38134)
+        error handling to return HTTP status line instead of
         irrelevant content of $! variable
 
 0.3001  2014-01-17

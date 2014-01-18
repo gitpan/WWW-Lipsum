@@ -15,10 +15,10 @@ name: WWW-Lipsum
 provides:
   WWW::Lipsum:
     file: lib/WWW/Lipsum.pm
-    version: 0.3002
+    version: 0.3003
 requires:
   HTML::TokeParser::Simple: 0
   HTTP::Request::Common: 0
   LWP::UserAgent: 0
   perl: 5.005
-version: 0.3002
+version: 0.3003

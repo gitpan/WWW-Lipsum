@@ -94,21 +94,23 @@ OLD METHOD NAMES
     The "generate" method used to be called "lipsum"; this is retained as an
     alias to "generate" if you really want it.
 
+MAINTAINER
+    Zoffix Znet <zoffix@cpan.org>
+
 AUTHOR
     Earle Martin <emartin@cpan.org> wrote this scraper, but see THANKS for
     details of who really did the work.
 
-MAINTAINER
-    Zoffix Znet <zoffix@cpan.org>
-
 LICENSE AND COPYRIGHT
     This program is licensed under the Creative Commons
-    Attribution-ShareAlike License. To view a copy of this license, visit
-    <http://creativecommons.org/licenses/by-sa/1.0/> or send a letter to
+    Attribution-ShareAlike 3.0 Unported License (CC BY-SA 3.0). To view a
+    copy of this license, visit
+    <http://creativecommons.org/licenses/by-sa/3.0/> or send a letter to
     Creative Commons, 559 Nathan Abbott Way, Stanford, California 94305,
     USA.
 
-LICENSE AND COPYRIGHT
+    LICENSE AND COPYRIGHT
+
     Artistic ### This is to fix a seemingly buggy behaviour of
     Test::Kwalitee; the actual license is in the section above
 
