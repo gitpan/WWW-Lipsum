@@ -8,7 +8,7 @@ use LWP::UserAgent;
 use HTTP::Request::Common;
 use HTML::TokeParser::Simple;
 
-$VERSION = 0.3001;
+$VERSION = 0.3002;
 
 sub new {
 	my $class = shift;
@@ -50,7 +50,7 @@ sub generate {
         ]);
   }
 
-  return "Error: $!" unless $response->is_success;
+  return "Error: " . $response->status_line unless $response->is_success;
 
   my $raw = $response->content;
   die "Fatal error: lipsum page wasn't as expected." unless defined $raw && $raw =~ /(.*)Generated(.*)/s;

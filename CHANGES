@@ -1,4 +1,8 @@
 
+0.3002  2014-01-17
+      - Fixed error handling to return HTTP status line instead of
+        irrelevant content of $! variable
+
 0.3001  2014-01-17
       - Zoffix Znet took over maintenance of the module
 
