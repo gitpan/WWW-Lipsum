@@ -3,7 +3,10 @@ INSTALL
 lib/WWW/Lipsum.pm
 Makefile.PL
 MANIFEST
+LICENSE
 META.yml
 Build.PL
 README
 t/lipsum.t
+xt/kwalitee.t
+META.json

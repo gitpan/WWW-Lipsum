@@ -1,34 +1,38 @@
-2004-04-06: 0.2
-            * James Wilson (who made lipsum.com) got in touch with me to say that
+
+0.3001  2014-01-17
+      - Zoffix Znet took over maintenance of the module
+
+0.2   2004-04-06
+            - James Wilson (who made lipsum.com) got in touch with me to say that
               he'd altered the output of the site. Here's what he wrote:
-                                                                                                                         
-                I notice that you seek through a few tables in order to                                                  
-                find the lipsum, and with advertising etc, that's not                                                    
-                going to be very reliable, so I've enclosed the lipsum                                                   
-                and generated lines in div tags with ids of lipsum and                                                   
-                generated respectively. Check the source of an output                                                    
-                page for a little waffle about these tags:                                                               
-                                                                                                                         
-                http://www.lipsum.com/?what=paras&amount=5&start=1                                                       
-                                                                                                                         
-                Something else I'll ask of you if possible... rather than 
-                submit to the root to retrieve the output, could you 
-                please submit to /feed/http, as I might add an XML 
-                interface etc in the future, and so I currently plan to 
+
+                I notice that you seek through a few tables in order to
+                find the lipsum, and with advertising etc, that's not
+                going to be very reliable, so I've enclosed the lipsum
+                and generated lines in div tags with ids of lipsum and
+                generated respectively. Check the source of an output
+                page for a little waffle about these tags:
+
+                http://www.lipsum.com/?what=paras&amount=5&start=1
+
+                Something else I'll ask of you if possible... rather than
+                submit to the root to retrieve the output, could you
+                please submit to /feed/http, as I might add an XML
+                interface etc in the future, and so I currently plan to
                 use /feed/xml and /feed/http etc.
-                
-                Hope that info helps you modify your Perl module and that                                                
-                the div tags will give you a consistent way of harvesting                                                
-                the lipsum without it being affected by my layout. 
-                
-              I've modified the module appropriately, as well as cleaned 
-              up the code a bit. Also, the "lipsum" method is now called 
+
+                Hope that info helps you modify your Perl module and that
+                the div tags will give you a consistent way of harvesting
+                the lipsum without it being affected by my layout.
+
+              I've modified the module appropriately, as well as cleaned
+              up the code a bit. Also, the "lipsum" method is now called
               "generate", but the old name is retained as an alias.
 
-2003-08-29: 0.11 
-            * Fixed a bug that caused spurious paragraphs - the lipsum.com text
+0.11  2003-08-29
+            - Fixed a bug that caused spurious paragraphs - the lipsum.com text
               generator puts a rogue newline after the starting phrase, which was
               breaking the parsing and causing one of tests to fail.
 
-2003-08-21: 0.1
-            * Initial release.
+0.1  2003-08-21
+            - Initial release.
