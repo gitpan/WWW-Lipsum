@@ -32,7 +32,7 @@ has _ua    => ( is => 'ro', build_arg => undef, default => sub {
 sub generate {
     my $self = shift;
     $self->lipsum(undef);
-    
+
     $self->_prep_args( @_ );
     my $res = $self->_ua->post( 'http://lipsum.com/feed/html', {
         amount => $self->amount,
@@ -40,7 +40,7 @@ sub generate {
         start  => $self->start ? 1 : 0,
         generate => 'Generate Lorem Ipsum',
     });
-    
+
     return $self->_set_error( 'Network error: ' . $res->status_line )
         unless $res->is_success;
 
@@ -51,7 +51,7 @@ sub generate {
             ->children;
     };
     @$ and return $self->_set_error("Parsing error: $@");
-    
+
     $self->html
         or return $self->lipsum(
             join "\n\n", map $_->all_text, $dom->find('p')->each
@@ -75,26 +75,28 @@ sub _prep_args {
     my $self = shift;
     my %args = @_;
 
-    $self->start( $args{start} ) 
+    $self->start( $args{start} )
         if exists $args{start};
-        
-    $self->html( $args{html} ) 
+
+    $self->html( $args{html} )
         if exists $args{html};
-    
+
     if ( defined $args{what} ) {
         croak q{Argument 'what' must be one of 'paras', 'words', 'bytes',}
                 . q{ or 'lists'}
             unless $args{what} =~ /\A(paras|words|bytes|lists)\z/;
-            
+
         $self->what( $args{what} );
     }
-        
+
     if ( defined $args{amount} ) {
         croak q{Argument 'amount' must contain a positive integer}
             unless $args{amount} and $args{amount} =~ /\A\d+\z/;
-        
+
         $self->amount( $args{amount} );
     }
+
+    return;
 }
 
 q|
@@ -106,8 +108,10 @@ __END__
 
 =encoding utf8
 
+=for stopwords BackPAN Ipsum lipsum Lorem www.lipsum.com. Znet Zoffix
+
 =head1 NAME
- 
+
 WWW::Lipsum - perl interface to www.lipsum.com
 
 =head1 SYNOPSIS
@@ -117,24 +121,24 @@ WWW::Lipsum - perl interface to www.lipsum.com
     my $lipsum = WWW::Lipsum->new(
         html => 1, amount => 50, what => 'bytes', start => 0
     );
-        
+
     print "$lipsum\n"; # auto-fetches lipsum text
-    
-    
+
+
     # Change an arg and check for errors explicitly
     $lipsum->generate( html => 0 )
         or die "Error: " . $lipsum->error;
 
     print $lipsum->lipsum . "\n";
-    
-    
+
+
     # Change some args and fetch using interpolation overload
     $lipsum->start(0);
     $lipsum->amount(5);
     $lipsum->what('paras');
-    
+
     print "$lipsum\n";
-    
+
     # generate a whole bunch of lipsums
     my @lipsums = map "$lipsum", 1..10;
 
@@ -142,7 +146,7 @@ WWW::Lipsum - perl interface to www.lipsum.com
 =head1 DESCRIPTION
 
 Generate I<Lorem Ipsum> place holder text from perl, using
-L<www.lipsum.com>
+L<www.lipsum.com|http://www.lipsum.com/>
 
 =head1 SEE ALSO
 
@@ -162,7 +166,10 @@ using a web service.
 
 Creates and returns a brand new C<WWW::Lipsum> object. Takes
 a number of B<optional> arguments that are given as key/value
-pairs. Possible arguments are as follows:
+pairs. These specify the format of the generated lipsum
+text and can be changed either individually, using the
+appropriate accessor methods, or when calling C<< ->generate >> method.
+Possible arguments are as follows:
 
 =head3 C<what>
 
@@ -175,29 +182,30 @@ B<Optional.> Specifies in what form to get the
 I<Lorem Ipsum> text. Valid values are lowercase strings
 C<paras>, C<lists>, C<words>, and C<bytes> that mean to get the text
 as C<paragraps>, C<lists>, C<words>, or C<bytes> respectively.
-B<Defaults to:> C<paras>. 
+B<Defaults to:> C<paras>.
 
-The meaning is most relevant for the C<amount> argument (see below). The 
+The meaning is most relevant for the C<amount> argument (see below). The
 C<lists> value will cause generation of variable-item-number lists of
-I<Lorem Ipsum> text. B<Note:> there seems to be very loose adherance
-to the C<amount> you get when you request C<bytes>, and the value seems
-to be ignored if C<amount> is set too low.
+I<Lorem Ipsum> text. B<Note:> there seems to be very loose adherence
+to the C<amount> you specified and what you get when you
+request C<bytes>, and the value seems to be ignored
+if C<amount> is set too low.
 
 =head3 C<amount>
 
     my $lipsum = WWW::Lipsum->new( amount => 10 );
 
 B<Optional.> B<Takes> a positive integer as a value. Large values
-will likely be abridged by L<www.lipsum.com> to something reasonable.
+will likely be abridged by L<www.lipsum.com|http://www.lipsum.com/> to something reasonable.
 Specifies the number of C<what> (see above) things to get.
 B<Defaults to:> C<5>.
 
 =head3 C<html>
 
     my $lipsum = WWW::Lipsum->new( html => 1 );
-    
+
 B<Optional.> B<Takes> true or false values. B<Specifies> whether to wrap
-I<Lorem Ipsum> text in HTML markup (will wrap in HTML when set to 
+I<Lorem Ipsum> text in HTML markup (will wrap in HTML when set to
 a true value). This will be C<< <ul>/<li> >>
 elements when C<what> is set to C<lists> and C<< <p> >> elements
 for everything else. When set to false, paragraphs and lists will
@@ -206,9 +214,10 @@ be separated by double new lines. B<Defaults to:> C<0> (false).
 =head3 C<start>
 
     my $lipsum = WWW::Lipsum->new( start => 0 );
-    
+
 B<Optional.> B<Takes> true or false values as a value. When set
-to a true value, will ask L<www.lipsum.com> to start the generated
+to a true value, will ask L<www.lipsum.com|http://www.lipsum.com/>
+to start the generated
 text with I<"Lorem Ipsum">. B<Defaults to:> C<1> (true)
 
 =head2 C<generate>
@@ -217,21 +226,27 @@ text with I<"Lorem Ipsum">. B<Defaults to:> C<1> (true)
         html => 1, amount => 50, what => 'bytes', start => 0
     ) or die $lipsum->error;
     my $x = $text;
-    
+
     # or
     $lipsum->generate or die $lipsum->error;
     $text = $lipsum->lipsum;
-    
+
     # or
     my $text = "$lipsum";
 
-Accesses L<www.lipsum.com> to obtain requested chunk of I<Lorem Ipsum> text.
+Accesses L<www.lipsum.com|http://www.lipsum.com/> to obtain requested
+chunk of I<Lorem Ipsum> text.
 B<Takes> the same arguments as C<new> (see above); all B<optional>.
 B<On success> returns generated I<Lorem Ipsum> text. B<On failure>
 returns C<undef> or an empty list, depending on the context, and
 the reason for failure will be available via the C<< ->error >> method.
 
-You can call this method by simply interpolating the C<WWW::Lipsum>
+B<Note:> if you call C<< ->generate >> with arguments, the new
+values will persist for all subsequent calls to C<< ->generate >>,
+until you change them either by, again, passing arguments to
+C<< ->generate >>, or by using accessor methods.
+
+You can call C<< ->generate >> by simply interpolating the C<WWW::Lipsum>
 object in a string. When called this way, if an error occurs, the
 interpolated value will be C<[Error: ERROR_DESCRIPTION_HERE]>, where
 C<ERROR_DESCRIPTION_HERE> is the return value of C<< ->error >> method.
@@ -242,7 +257,7 @@ text.
 
     $lipsum->generate or die $lipsum->error;
     $text = $lipsum->lipsum;
-    
+
 B<Takes> no arguments. Must be called after a successful call to
 C<< ->generate >>. Returns the same thing the last successful call
 to C<< ->generate >> returned.
@@ -251,7 +266,7 @@ to C<< ->generate >> returned.
 
     $lipsum->generate
         or die 'Error occured: ' . $lipsum->error;
-        
+
 B<Takes> no arguments. Returns the human-readable message, explaining
 why the last call to C<< ->generate >> failed.
 
@@ -262,7 +277,7 @@ why the last call to C<< ->generate >> failed.
     $lipsum->what('lists');
     $lipsum->what('words');
     $lipsum->what('bytes');
-    
+
 B<Takes> a single B<optional> argument that is the same as the value for the
 C<what> argument of the C<< ->new >> method.
 When given an argument, modifies the currently active value for the
@@ -280,7 +295,7 @@ See C<< ->new >> method for more info.
 B<Takes> a single B<optional> argument that is the same as the value for the
 C<start> argument of the C<< ->new >> method.
 When given an argument, modifies the currently active value for the
-C<start> argument. B<Returns> the currently active value of C<start> 
+C<start> argument. B<Returns> the currently active value of C<start>
 argument (which will be the provided argument, if one is given).
 See C<< ->new >> method for more info.
 
@@ -305,7 +320,7 @@ See C<< ->new >> method for more info.
 B<Takes> a single B<optional> argument that is the same as the value for the
 C<html> argument of the C<< ->new >> method.
 When given an argument, modifies the currently active value for the
-C<html> argument. B<Returns> the currently active value of C<html> 
+C<html> argument. B<Returns> the currently active value of C<html>
 argument (which will be the provided argument, if one is given).
 See C<< ->new >> method for more info.
 
@@ -340,7 +355,7 @@ by Earle Martin. I have a couple of modules that depend on
 C<WWW::Lipsum>. Earle, or someone else, subsequently deleted it from
 CPAN, leaving my modules dead.
 
-At first, I resurected Earle's version, but it had a bug. The code
+At first, I resurrected Earle's version, but it had a bug. The code
 was using L<HTML::TokeParser> and was a pain in the butt
 to maintain, and the interface really irked me.
 So, I rewrote the whole thing from scratch, broke the API
@@ -349,3 +364,4 @@ So, I rewrote the whole thing from scratch, broke the API
 If you are looking for Earle's version, it can still be accessed on
 L<BackPAN|http://backpan.perl.org/authors/id/E/EM/EMARTIN/>.
 
+=cut

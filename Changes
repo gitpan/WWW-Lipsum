@@ -1,5 +1,9 @@
 Revision history for WWW-Lipsum
- 
+
+1.001002  2014-01-26
+        - Made some clarifications in the POD
+        - Added up a whole bunch of author/release tests
+
 1.001001  2014-01-25
         - Complete rewrite from scratch; taken over the namespace from
           the previous author who deleted his WWW-Lipsum

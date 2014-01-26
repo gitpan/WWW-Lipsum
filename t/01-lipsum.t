@@ -42,7 +42,7 @@ SKIP: {
             BAIL_OUT 'Got weird error! ' . $l->error;
         }
     }
-    
+
     like( $text, qr/^Lorem ipsum/, 'The text we got matches Lipsum' );
 }
 
@@ -59,7 +59,7 @@ SKIP: {
             BAIL_OUT 'Got weird error! ' . $l->error;
         }
     }
-    
+
     like( $text, qr/^Lorem ipsum/,
         'The text we got matches Lipsum; when using overloading'
     );
@@ -78,7 +78,7 @@ SKIP: {
             BAIL_OUT 'Got weird error! ' . $l->error;
         }
     }
-    
+
     like( $text, qr/^(?!Lorem ipsum)/,
         'The text we got must NOT match Lipsum at the start'
     );
@@ -97,7 +97,7 @@ SKIP: {
             BAIL_OUT 'Got weird error! ' . $l->error;
         }
     }
-    
+
     like( $text, qr/^\s*<ul>/,
         'The text we got must have some semblance to <ul> markup'
     );
@@ -116,7 +116,7 @@ SKIP: {
             BAIL_OUT 'Got weird error! ' . $l->error;
         }
     }
-    
+
     like( $text, qr/^\s*<p>/,
         'The text we got must have some semblance to <p> markup'
     );
