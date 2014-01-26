@@ -1,275 +1,351 @@
 package WWW::Lipsum;
 
 use strict;
-use Carp qw(croak);
-use vars qw( $VERSION );
+use warnings;
 
+our $VERSION = 1.001001;
+
+use Carp qw/croak/;
 use LWP::UserAgent;
-use HTTP::Request::Common;
-use HTML::TokeParser::Simple;
+use Mojo::DOM;
+use Moo;
+use overload q|""| => sub {
+    my $self = shift;
+    my $text = $self->generate;
+    return $text || '[Error: ' . $self->error . ']';
+};
 
-$VERSION = 0.3003;
+has what   => ( is => 'rw', default => 'paras'  );
+has start  => ( is => 'rw', default => 1        );
+has amount => ( is => 'rw', default => 5        );
+has html   => ( is => 'rw', default => 0        );
+has lipsum => ( is => 'rw', build_args => undef );
 
-sub new {
-	my $class = shift;
-	my $self = {};
-	bless $self, $class;
-	return $self;
-}
+has error => ( is => 'rw', build_arg => undef );
+has _ua    => ( is => 'ro', build_arg => undef, default => sub {
+    return LWP::UserAgent->new( timeout => 30,
+        agent => 'Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:26.0) '
+                    . 'Gecko/20100101 Firefox/26.0'
+    );
+});
 
 sub generate {
-	my ($self, %args) = @_;
+    my $self = shift;
+    $self->lipsum(undef);
+    
+    $self->_prep_args( @_ );
+    my $res = $self->_ua->post( 'http://lipsum.com/feed/html', {
+        amount => $self->amount,
+        what   => $self->what,
+        start  => $self->start ? 1 : 0,
+        generate => 'Generate Lorem Ipsum',
+    });
+    
+    return $self->_set_error( 'Network error: ' . $res->status_line )
+        unless $res->is_success;
 
-	foreach my $arg ( qw( amount type start html ) ) {
-		$self->{$arg} = $args{$arg};
-	}
+    my $dom = eval {
+        Mojo::DOM->new( $res->decoded_content )
+            ->find('#lipsum')
+            ->first
+            ->children;
+    };
+    @$ and return $self->_set_error("Parsing error: $@");
+    
+    $self->html
+        or return $self->lipsum(
+            join "\n\n", map $_->all_text, $dom->find('p')->each
+        );
 
-	# Arguments. If none are given, generate 1 paragraph by default.
+    my $html = "$dom";
+    # a little hackery to get rid of lipsum.com's invalid markup
+    $self->what eq 'lists' and $html =~ s{<p>|</p>}{}gi;
+    $html =~ s/^\s+|\s+$//g;
 
-	$self->{amount} = $args{amount} || 1;	      # How much text is wanted?
-	$self->{what}   = $args{what}   || 'paras'; # What type of text?
-	$self->{start}  = $args{start}  || 1;	      # Begin with "Lorem ipsum..."?
-	$self->{html}   = $args{html}   || undef;	  # Wrap text in HTML tags?
-
-	my $ua = LWP::UserAgent->new;
-  my $response;
-
-  if ($self->{start} and $self->{start} eq 'no')
-  {
-    $response = $ua->request(POST 'http://www.lipsum.com/feed/http', [
-          amount => $self->{amount},
-          what   => $self->{what}
-        ]);
-  }
-  else
-  {
-    $response = $ua->request(POST 'http://www.lipsum.com/feed/http', [
-          amount => $self->{amount},
-          what   => $self->{what},
-          start  => 1
-        ]);
-  }
-
-  return "Error: " . $response->status_line unless $response->is_success;
-
-  my $raw = $response->content;
-  die "Fatal error: lipsum page wasn't as expected." unless defined $raw && $raw =~ /(.*)Generated(.*)/s;
-
-  my $stream = HTML::TokeParser::Simple->new( \$raw ) or die $!;
-
-  while (my $token = $stream->get_token)
-  {
-    # We're looking for '<div id="lipsum">'.
-    next unless $token->is_tag('div');
-    next unless defined $token->return_attr('id') && $token->return_attr('id') eq 'lipsum';
-    my $text = $stream->get_text('/div');
-
-    $text =~ s/ //; # remove leading space
-
-    if ($self->{what} =~ /^words$/i or $self->{what} =~ /^bytes$/i)
-    {
-      $text =~ s/\n//g;
-		  return $text;
-    }
-    elsif ($self->{what} =~ /^lists$/i)
-    {
-      return $self->lists($text);
-    }
-    else
-    {
-      return $self->paras($text);
-    }
-  }
+    return $self->lipsum( $html );
 }
 
-# The splitting and pushing and what-have-you that you're about to
-# encounter would almost certainly be unnecessary if I really
-# understood HTML::TokeParser.
-
-sub paras
-{
-  my ($self, $text) = @_;
-  my @paras;
-
-  foreach (split("\n", $text))
-  {
-    next unless $_ !~ /^ /; # drop empty chunks
-    push (@paras, $_);
-  }
-
-  for (0..1) { shift @paras; } # drop empty items
-
-  if (defined $self->{html})
-  {
-    $_ = "<p>\n" . $_ . "\n</p>" foreach @paras;
-  }
-
-  @paras;
+sub _set_error {
+    my ( $self, $error ) = @_;
+    $self->error( $error );
+    return;
 }
 
-sub lists
-{
-  my ($self, $text) = @_;
-  my (@items, @list);
+sub _prep_args {
+    my $self = shift;
+    my %args = @_;
 
-  foreach (split( "\n", $text ))
-  {
-    next unless $_ =~ /  /; # drop empty chunks
-    $_ =~ s/.//;            # remove leading space
-    chop $_;                # remove trailing space
-
-    foreach my $line (split '  ', $_)
-    {
-      $line = '<li>' . $line . '</li>' if $self->{html};
-      $line .= "\n";
-      push (@list, $line);
+    $self->start( $args{start} ) 
+        if exists $args{start};
+        
+    $self->html( $args{html} ) 
+        if exists $args{html};
+    
+    if ( defined $args{what} ) {
+        croak q{Argument 'what' must be one of 'paras', 'words', 'bytes',}
+                . q{ or 'lists'}
+            unless $args{what} =~ /\A(paras|words|bytes|lists)\z/;
+            
+        $self->what( $args{what} );
     }
-
-    my $tidied = join ('', @list);
-
-    $tidied = "<ul>\n" . $tidied . '</ul>' if $self->{html};
-
-    push (@items, $tidied);
-  }
-
-  @items;
+        
+    if ( defined $args{amount} ) {
+        croak q{Argument 'amount' must contain a positive integer}
+            unless $args{amount} and $args{amount} =~ /\A\d+\z/;
+        
+        $self->amount( $args{amount} );
+    }
 }
 
-# Old method name for backwards compatibility.
-sub lipsum {
-	my ($self, %args) = @_;
-  $self->generate(%args);
-}
-
-1;
+q|
+0 bottles of beer on the wall, 0 bottles of beer! You take one down,
+and pass it around, 4294967295 bottles of beer on the wall!
+|;
 
 __END__
 
+=encoding utf8
+
 =head1 NAME
-
-WWW::Lipsum - get autogenerated text from lipsum.com
-
-=head1 DESCRIPTION
-
-C<WWW::Lipsum> is a module that will retrive "lorem ipsum" placeholder text
-from lipsum.com.
-
-What is "lorem ipsum"?
-
-    "Lorem Ipsum, or Lipsum for short, is simply dummy text of the
-    printing and typesetting industry. Lipsum has been the industry's
-    standard dummy text ever since the 1500s, when an unknown printer
-    took a galley of type and scrambled it to make a type specimen book.
-    It has survived not only four centuries, but now the leap into
-    electronic typesetting, remaining essentially unchanged. It was
-    popularised in the 1960s with the release of Letraset sheets
-    containing Lipsum passages, and more recently with desktop
-    publishing software like Aldus PageMaker including versions of
-    Lipsum."  -- lipsum.com
-
-lipsum.com is a useful resource on the Web that will generate passages of
-lorem ipsum text for you in sizes of your choice. This module allows you to
-retrieve them in an OO fashion to utilise for whatever purpose you wish.
+ 
+WWW::Lipsum - perl interface to www.lipsum.com
 
 =head1 SYNOPSIS
 
     use WWW::Lipsum;
 
-    my $lipsum = WWW::Lipsum->new;
+    my $lipsum = WWW::Lipsum->new(
+        html => 1, amount => 50, what => 'bytes', start => 0
+    );
+        
+    print "$lipsum\n"; # auto-fetches lipsum text
+    
+    
+    # Change an arg and check for errors explicitly
+    $lipsum->generate( html => 0 )
+        or die "Error: " . $lipsum->error;
 
-    print $lipsum->generate;
+    print $lipsum->lipsum . "\n";
+    
+    
+    # Change some args and fetch using interpolation overload
+    $lipsum->start(0);
+    $lipsum->amount(5);
+    $lipsum->what('paras');
+    
+    print "$lipsum\n";
+    
+    # generate a whole bunch of lipsums
+    my @lipsums = map "$lipsum", 1..10;
 
-    my @paragraphs = $lipsum->generate(
-                                       amount => 5,
-                                       what   => 'paras',
-                                       start  => 'no',
-                                       html   => 1
-                                      );
+
+=head1 DESCRIPTION
+
+Generate I<Lorem Ipsum> place holder text from perl, using
+L<www.lipsum.com>
+
+=head1 SEE ALSO
+
+You most likely want L<Text::Lorem> or L<Text::Lorem::More>
+instead of this module, as those generate I<Lorem Ipsum> text without
+using a web service.
 
 =head1 METHODS
 
-There is just one method, C<generate>, which returns lorem ipsum text. It
-has several options to correspond with those offered by lipsum.com.
+=head2 C<new>
 
-    print $lipsum->generate;    # default usage, no options
+    my $lipsum = WWW::Lipsum->new;
 
-This will give you one paragraph of lorem ipsum, beginning with the phrase
-"Lorem ipsum dolor sit amet", as is traditional. The size of a "paragraph" is
-randomly determined by the lipsum.com text generator, but is generally between
-70 and 120 words.
+    my $lipsum = WWW::Lipsum->new(
+        html => 1, amount => 50, what => 'bytes', start => 0
+    );
 
-    my @paragraphs = $lipsum->generate(
-                                       amount => 5,
-                                       what   => 'paras',
-                                       start  => 'no',
-                                       html   => 0
-                                      );
+Creates and returns a brand new C<WWW::Lipsum> object. Takes
+a number of B<optional> arguments that are given as key/value
+pairs. Possible arguments are as follows:
 
-This will give you five paragraphs of lorem ipsum, the first of which will
-be without the starting phrase. Setting 'html' to 1 will cause each paragraph
-to be wrapped in HTML's <p></p> tags.
+=head3 C<what>
 
-    print $lipsum->generate(
-                            amount => 100,
-                            what   => 'words'
-                           );
+    my $lipsum = WWW::Lipsum->new( what => 'paras' );
+    my $lipsum = WWW::Lipsum->new( what => 'lists' );
+    my $lipsum = WWW::Lipsum->new( what => 'words' );
+    my $lipsum = WWW::Lipsum->new( what => 'bytes' );
 
-This will give you a hundred words of lorem ipsum with the starting
-phrase. The 'html' setting has no effect if you ask for words. When
-used to fill a variable, this will give you a list with one item.
+B<Optional.> Specifies in what form to get the
+I<Lorem Ipsum> text. Valid values are lowercase strings
+C<paras>, C<lists>, C<words>, and C<bytes> that mean to get the text
+as C<paragraps>, C<lists>, C<words>, or C<bytes> respectively.
+B<Defaults to:> C<paras>. 
 
-    print $lipsum->generate(
-                            amount => 1024,
-                            what   => 'bytes'
-                           );
+The meaning is most relevant for the C<amount> argument (see below). The 
+C<lists> value will cause generation of variable-item-number lists of
+I<Lorem Ipsum> text. B<Note:> there seems to be very loose adherance
+to the C<amount> you get when you request C<bytes>, and the value seems
+to be ignored if C<amount> is set too low.
 
-This will give you 1024 bytes of lorem ipsum with the starting phrase.
-Again, the 'html' setting will have no effect. Again, this will give
-you a one-item list.
+=head3 C<amount>
 
-   my @lists = $lipsum->generate(
-                                 amount => 10,
-                                 what   => 'lists',
-                                 html   => 1
-                                );
+    my $lipsum = WWW::Lipsum->new( amount => 10 );
 
-The lipsum.com text generator's 'lists' setting produces HTML lists of
-random size. Using this setting with this module will give you small chunks
-of text, generally of the order of a couple of sentences. Using the 'html'
-setting will cause these chunks to be wrapped in <li></li> tags for you to
-use as you see fit. If 'html' is off, you will get blocks of single lines of
+B<Optional.> B<Takes> a positive integer as a value. Large values
+will likely be abridged by L<www.lipsum.com> to something reasonable.
+Specifies the number of C<what> (see above) things to get.
+B<Defaults to:> C<5>.
+
+=head3 C<html>
+
+    my $lipsum = WWW::Lipsum->new( html => 1 );
+    
+B<Optional.> B<Takes> true or false values. B<Specifies> whether to wrap
+I<Lorem Ipsum> text in HTML markup (will wrap in HTML when set to 
+a true value). This will be C<< <ul>/<li> >>
+elements when C<what> is set to C<lists> and C<< <p> >> elements
+for everything else. When set to false, paragraphs and lists will
+be separated by double new lines. B<Defaults to:> C<0> (false).
+
+=head3 C<start>
+
+    my $lipsum = WWW::Lipsum->new( start => 0 );
+    
+B<Optional.> B<Takes> true or false values as a value. When set
+to a true value, will ask L<www.lipsum.com> to start the generated
+text with I<"Lorem Ipsum">. B<Defaults to:> C<1> (true)
+
+=head2 C<generate>
+
+    my $text = $lipsum->generate(
+        html => 1, amount => 50, what => 'bytes', start => 0
+    ) or die $lipsum->error;
+    my $x = $text;
+    
+    # or
+    $lipsum->generate or die $lipsum->error;
+    $text = $lipsum->lipsum;
+    
+    # or
+    my $text = "$lipsum";
+
+Accesses L<www.lipsum.com> to obtain requested chunk of I<Lorem Ipsum> text.
+B<Takes> the same arguments as C<new> (see above); all B<optional>.
+B<On success> returns generated I<Lorem Ipsum> text. B<On failure>
+returns C<undef> or an empty list, depending on the context, and
+the reason for failure will be available via the C<< ->error >> method.
+
+You can call this method by simply interpolating the C<WWW::Lipsum>
+object in a string. When called this way, if an error occurs, the
+interpolated value will be C<[Error: ERROR_DESCRIPTION_HERE]>, where
+C<ERROR_DESCRIPTION_HERE> is the return value of C<< ->error >> method.
+On success, the interpolated value will be the generated I<Lorem Ipsum>
 text.
 
-=head1 OLD METHOD NAMES
+=head2 C<lipsum>
 
-The C<generate> method used to be called C<lipsum>; this is retained as an
-alias to C<generate> if you really want it.
+    $lipsum->generate or die $lipsum->error;
+    $text = $lipsum->lipsum;
+    
+B<Takes> no arguments. Must be called after a successful call to
+C<< ->generate >>. Returns the same thing the last successful call
+to C<< ->generate >> returned.
 
-=head1 MAINTAINER
+=head2 C<error>
 
-Zoffix Znet <zoffix@cpan.org>
+    $lipsum->generate
+        or die 'Error occured: ' . $lipsum->error;
+        
+B<Takes> no arguments. Returns the human-readable message, explaining
+why the last call to C<< ->generate >> failed.
+
+=head2 C<what>
+
+    my $current_what = $lipsum->what;
+    $lipsum->what('paras');
+    $lipsum->what('lists');
+    $lipsum->what('words');
+    $lipsum->what('bytes');
+    
+B<Takes> a single B<optional> argument that is the same as the value for the
+C<what> argument of the C<< ->new >> method.
+When given an argument, modifies the currently active value for the
+C<what> argument.
+B<Returns> the currently active value of C<what> argument (which
+will be the provided argument, if one is given).
+See C<< ->new >> method for more info.
+
+=head2 C<start>
+
+    my $current_start = $lipsum->start;
+    $lipsum->start(0);
+    $lipsum->start(1);
+
+B<Takes> a single B<optional> argument that is the same as the value for the
+C<start> argument of the C<< ->new >> method.
+When given an argument, modifies the currently active value for the
+C<start> argument. B<Returns> the currently active value of C<start> 
+argument (which will be the provided argument, if one is given).
+See C<< ->new >> method for more info.
+
+=head2 C<amount>
+
+    my $current_amount = $lipsum->amount;
+    $lipsum->amount(50);
+    $lipsum->amount(15);
+
+B<Takes> a single B<optional> argument that is the same as the value for the
+C<amount> argument of the C<< ->new >> method.
+When given an argument, modifies the currently active value for the
+C<amount> argument.
+See C<< ->new >> method for more info.
+
+=head2 C<html>
+
+    my $current_html = $lipsum->html;
+    $lipsum->html(1);
+    $lipsum->html(0);
+
+B<Takes> a single B<optional> argument that is the same as the value for the
+C<html> argument of the C<< ->new >> method.
+When given an argument, modifies the currently active value for the
+C<html> argument. B<Returns> the currently active value of C<html> 
+argument (which will be the provided argument, if one is given).
+See C<< ->new >> method for more info.
+
+=head1 REPOSITORY
+
+Fork this module on GitHub:
+L<https://github.com/zoffixznet/WWW-Lipsum>
+
+=head1 BUGS
+
+To report bugs or request features, please use
+L<https://github.com/zoffixznet/WWW-Lipsum/issues>
+
+If you can't access GitHub, you can email your request
+to C<bug-www-lipsum at rt.cpan.org>
 
 =head1 AUTHOR
 
-Earle Martin <emartin@cpan.org> wrote this scraper, but see THANKS for details
-of who really did the work.
+Zoffix Znet <zoffix at cpan.org>
+(L<http://zoffix.com/>, L<http://haslayout.net/>)
 
-=head1 LICENSE AND COPYRIGHT
+=head1 LICENSE
 
-This program is licensed under the
-Creative Commons Attribution-ShareAlike 3.0 Unported License (CC BY-SA 3.0).
-To view a copy of this license, visit
-L<http://creativecommons.org/licenses/by-sa/3.0/> or send a letter to Creative
-Commons, 559 Nathan Abbott Way, Stanford, California 94305, USA.
+You can use and distribute this module under the same terms as Perl itself.
+See the C<LICENSE> file included in this distribution for complete
+details.
 
-LICENSE AND COPYRIGHT
+=head1 HISTORY AND NOTES ON OLD VERSION
 
-Artistic ### This is to fix a seemingly buggy behaviour of Test::Kwalitee; the actual license is in the section above
+There used to be another version of C<WWW::Lipsum> on CPAN, developed
+by Earle Martin. I have a couple of modules that depend on
+C<WWW::Lipsum>. Earle, or someone else, subsequently deleted it from
+CPAN, leaving my modules dead.
 
-=head1 THANKS
+At first, I resurected Earle's version, but it had a bug. The code
+was using L<HTML::TokeParser> and was a pain in the butt
+to maintain, and the interface really irked me.
+So, I rewrote the whole thing from scratch, broke the API
+(more or less), and released the module under a same-as-perl license.
 
-All kudos must go to James Wilson <webmaster(at)lipsum.com> for creating
-lipsum.com and thus providing inspiration for this module - and also for kindly
-actually modifying the way his site works to make it easier for me to parse.
+If you are looking for Earle's version, it can still be accessed on
+L<BackPAN|http://backpan.perl.org/authors/id/E/EM/EMARTIN/>.
 
-=cut
