@@ -1,5 +1,8 @@
 Revision history for WWW-Lipsum
 
+1.001004  2014-01-26
+        - Switched to use Author::ZOFFIX plugin bundle in dzil.ini
+
 1.001003  2014-01-26
         - Forgot to bump the version
 
