@@ -1,5 +1,8 @@
 Revision history for WWW-Lipsum
 
+1.001003  2014-01-26
+        - Forgot to bump the version
+
 1.001002  2014-01-26
         - Made some clarifications in the POD
         - Added up a whole bunch of author/release tests

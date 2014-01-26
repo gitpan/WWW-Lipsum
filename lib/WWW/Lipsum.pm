@@ -3,7 +3,7 @@ package WWW::Lipsum;
 use strict;
 use warnings;
 
-our $VERSION = 1.001001;
+our $VERSION = 1.001003;
 
 use Carp qw/croak/;
 use LWP::UserAgent;

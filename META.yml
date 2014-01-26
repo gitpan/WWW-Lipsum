@@ -28,4 +28,4 @@ requires:
 resources:
   bugtracker: https://github.com/zoffixznet/WWW-Lipsum/issues
   repository: git://github.com/zoffixznet/WWW-Lipsum.git
-version: 1.001002
+version: 1.001003
