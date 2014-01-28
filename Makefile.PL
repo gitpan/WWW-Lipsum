@@ -24,7 +24,7 @@ my %WriteMakefileArgs = (
     "Carp" => 0,
     "LWP::UserAgent" => 0,
     "Mojo::DOM" => 0,
-    "Moo" => 0,
+    "Moo" => "1.004002",
     "overload" => 0,
     "strict" => 0,
     "warnings" => 0
@@ -35,7 +35,7 @@ my %WriteMakefileArgs = (
     "IPC::Open3" => 0,
     "Test::More" => 0
   },
-  "VERSION" => "1.001004",
+  "VERSION" => "1.001005",
   "test" => {
     "TESTS" => "t/*.t"
   }
@@ -49,7 +49,7 @@ my %FallbackPrereqs = (
   "IPC::Open3" => 0,
   "LWP::UserAgent" => 0,
   "Mojo::DOM" => 0,
-  "Moo" => 0,
+  "Moo" => "1.004002",
   "Test::More" => 0,
   "overload" => 0,
   "strict" => 0,

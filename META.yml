@@ -20,12 +20,12 @@ name: WWW-Lipsum
 provides:
   WWW::Lipsum:
     file: lib/WWW/Lipsum.pm
-    version: 1.001004
+    version: 1.001005
 requires:
   Carp: 0
   LWP::UserAgent: 0
   Mojo::DOM: 0
-  Moo: 0
+  Moo: 1.004002
   overload: 0
   perl: 5.006
   strict: 0
@@ -34,7 +34,7 @@ resources:
   bugtracker: https://github.com/zoffixznet/www-lipsum/issues
   homepage: http://metacpan.org/release/WWW-Lipsum
   repository: git://github.com/zoffixznet/www-lipsum.git
-version: 1.001004
+version: 1.001005
 x_Dist_Zilla:
   perl:
     version: 5.014002
@@ -280,6 +280,14 @@ x_Dist_Zilla:
     -
       class: Dist::Zilla::Plugin::UploadToCPAN
       name: '@Author::ZOFFIX/UploadToCPAN'
+      version: 5.012
+    -
+      class: Dist::Zilla::Plugin::Prereqs
+      config:
+        Dist::Zilla::Plugin::Prereqs:
+          phase: runtime
+          type: requires
+      name: Prereqs
       version: 5.012
     -
       class: Dist::Zilla::Plugin::FinderCode
