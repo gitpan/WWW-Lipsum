@@ -65,23 +65,35 @@ SKIP: {
     );
 }
 
-SKIP: {
-    $l->start(0);
-    $l->html(0);
-    my $text = "$l";
-    unless ( $text ) {
-        if ( $l->error =~ /^Network/ ) {
-            diag "Got error: " . ($l->error ? $l->error : '[undefined]');
-            skip 'Got network error: ' . $l->error, 1;
+###### Sometimes we'd get a Lorem ipsum start simply by chance
+###### and this test would fail
+###### This is really a bug in www.lipsum.com
+###### So let's make a few requests, and see if ALL of them start
+###### with Lorem Ipsum; only then fail.
+{
+    my $lipsum_count = 0;
+    for ( 1..3 ) {
+        $l->start(0);
+        $l->html(0);
+        my $text = "$l";
+        unless ( $text ) {
+            if ( $l->error =~ /^Network/ ) {
+                diag "Got error: " . ($l->error ? $l->error : '[undefined]');
+                next;
+            }
+            else {
+                BAIL_OUT 'Got weird error! ' . $l->error;
+            }
         }
-        else {
-            BAIL_OUT 'Got weird error! ' . $l->error;
+
+        if ( $text =~ /^Lorem ipsum/i ) {
+            diag "Uhoh.. We got text starting with Lorem Ipsum, when we"
+            . " shouldn't have. Maybe it's just a coincidence; retrying.";
+            $lipsum_count++;
         }
     }
 
-    like( $text, qr/^(?!Lorem ipsum)/,
-        'The text we got must NOT match Lipsum at the start'
-    );
+    ok( $lipsum_count <= 1, 'Out of three no-lipsum-at-start tests, 1 or fewer returned Lipsum as start');
 }
 
 SKIP: {

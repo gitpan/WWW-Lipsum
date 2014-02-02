@@ -3,7 +3,7 @@ package WWW::Lipsum;
 use strict;
 use warnings;
 
-our $VERSION = '1.001006'; # VERSION
+our $VERSION = '1.001007'; # VERSION
 
 use Carp qw/croak/;
 use LWP::UserAgent;
@@ -219,6 +219,9 @@ B<Optional.> B<Takes> true or false values as a value. When set
 to a true value, will ask L<www.lipsum.com|http://www.lipsum.com/>
 to start the generated
 text with I<"Lorem Ipsum">. B<Defaults to:> C<1> (true)
+
+B<Note:> it seems sometimes L<www.lipsum.com|http://www.lipsum.com/>
+would return text that starts with I<"Lorem Ipsum"> simply by chance.
 
 =head2 C<generate>
 

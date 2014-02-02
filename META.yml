@@ -20,7 +20,7 @@ name: WWW-Lipsum
 provides:
   WWW::Lipsum:
     file: lib/WWW/Lipsum.pm
-    version: 1.001006
+    version: 1.001007
 requires:
   Carp: 0
   LWP::UserAgent: 0
@@ -35,7 +35,7 @@ resources:
   bugtracker: https://github.com/zoffixznet/www-lipsum/issues
   homepage: http://metacpan.org/release/WWW-Lipsum
   repository: git://github.com/zoffixznet/www-lipsum.git
-version: 1.001006
+version: 1.001007
 x_Dist_Zilla:
   perl:
     version: 5.014002
@@ -56,8 +56,11 @@ x_Dist_Zilla:
             - strict
             - warnings
             - base
+            - ExtUtils::MakeMaker
+            - IPC::Open3
+            - File::Copy
       name: '@Author::ZOFFIX/PromptIfStale'
-      version: 0.015
+      version: 0.016
     -
       class: Dist::Zilla::Plugin::GatherDir
       name: '@Author::ZOFFIX/GatherDir'

@@ -111,6 +111,9 @@ to a true value, will ask [www.lipsum.com](http://www.lipsum.com/)
 to start the generated
 text with _"Lorem Ipsum"_. __Defaults to:__ `1` (true)
 
+__Note:__ it seems sometimes [www.lipsum.com](http://www.lipsum.com/)
+would return text that starts with _"Lorem Ipsum"_ simply by chance.
+
 ## `generate`
 
     my $text = $lipsum->generate(
