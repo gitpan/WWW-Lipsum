@@ -4,8 +4,6 @@ use strict;
 use warnings FATAL => 'all';
 use Test::More;
 
-plan tests => 15;
-
 use WWW::Lipsum;
 
 my $l_test = WWW::Lipsum->new;
@@ -42,7 +40,6 @@ SKIP: {
             BAIL_OUT 'Got weird error! ' . $l->error;
         }
     }
-
     like( $text, qr/^Lorem ipsum/, 'The text we got matches Lipsum' );
 }
 
@@ -50,8 +47,8 @@ SKIP: {
     $l->start(1);
     $l->html(0);
     my $text = "$l";
-    unless ( $text ) {
-        if ( $l->error =~ /^Network/ ) {
+    if ( $text =~ /\[Error/ ) {
+        if ( $l->error =~ /Network/ ) {
             diag "Got error: " . ($l->error ? $l->error : '[undefined]');
             skip 'Got network error: ' . $l->error, 1;
         }
@@ -76,7 +73,7 @@ SKIP: {
         $l->start(0);
         $l->html(0);
         my $text = "$l";
-        unless ( $text ) {
+        if ( $text =~ /\[Error/ ) {
             if ( $l->error =~ /^Network/ ) {
                 diag "Got error: " . ($l->error ? $l->error : '[undefined]');
                 next;
@@ -100,7 +97,7 @@ SKIP: {
     $l->html(1);
     $l->what('lists');
     my $text = "$l";
-    unless ( $text ) {
+    if ( $text =~ /^\[Error/ ) {
         if ( $l->error =~ /^Network/ ) {
             diag "Got error: " . ($l->error ? $l->error : '[undefined]');
             skip 'Got network error: ' . $l->error, 1;
@@ -119,7 +116,7 @@ SKIP: {
     $l->html(1);
     $l->what('paras');
     my $text = "$l";
-    unless ( $text ) {
+    if ( $text =~ /^\[Error/ ) {
         if ( $l->error =~ /^Network/ ) {
             diag "Got error: " . ($l->error ? $l->error : '[undefined]');
             skip 'Got network error: ' . $l->error, 1;
@@ -133,3 +130,5 @@ SKIP: {
         'The text we got must have some semblance to <p> markup'
     );
 }
+
+done_testing();

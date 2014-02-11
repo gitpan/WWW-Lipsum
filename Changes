@@ -1,5 +1,8 @@
 Revision history for WWW-Lipsum
 
+1.001008  2014-02-10
+        - Fixed up the tests that failed when there was no network
+
 1.001007  2014-02-02
         - Fixed a test that's been failing sometimes simply due to random
           chance of getting the unwanted type of data
